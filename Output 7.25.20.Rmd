@@ -1,52 +1,22 @@
+---
+title: "SM and Polarization Output 7.25.20"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, results='asis'}
 ####Libraries####
 library(easypackages)
 libs<-c("tidyverse", "ggplot2", "car", "psych", "haven", "naniar", "plm", "stargazer")
 libraries(libs)
 ####Import the Data####
-dat.orig.4 <- read_sav("Data/s7991_UPenn_LongPollW4_FINAL_WEIGHTED_client_7.11.2019.sav")
-dat.orig.5 <- read_sav("Data/7991_UPenn_LongPoll W5_client_04.13.2020.sav")
-dat.orig.3 <- read_sav("Data/Upenn_LongPollW3_FINAL_WEIGHTED_2018-11-20.sav")
-
-# Add longitudinal indicator
-dat.orig.3$wave_W3 <- 1
-dat.orig.4$wave_W4 <- 1
-dat.orig.5$wave_W5 <- 1
-
-####Merge Datasets####
-dat <- dat.orig.4 %>%
-  full_join(dat.orig.5, by='CaseId')
-
-dat <- dat.orig.3 %>%
-  select(THERM3_W3, THERM4_W3) %>%
-  full_join(dat, by='CaseId')
-
-####Cleaning####
-#Set up values for NA
-na.values.2<-c(77, 98, 99)
-na.values.3<- c(777, 998, 999)
-#Get indices for Therms
-therms<-grep("THERM", colnames(dat), fixed=T)
-#vector of columns with 2-digit NAs
-clean.length2<-colnames(dat[c(-1,-therms)])
-#vector of columns with 3-digit NAs
-clean.length3<- colnames(dat[therms])
-#Remove NAs
-dat <- dat %>%
-  replace_with_na_at(.vars=clean.length2[1:100], condition = ~.x %in% na.values.2)
-dat <- dat %>%
-  replace_with_na_at(.vars=clean.length2[101:200], condition = ~.x %in% na.values.2)
-dat <- dat %>%
-  replace_with_na_at(.vars=clean.length2[201:300], condition = ~.x %in% na.values.2)
-dat <- dat %>%
-  replace_with_na_at(.vars=clean.length2[301:400], condition = ~.x %in% na.values.2)
-dat <- dat %>%
-  replace_with_na_at(.vars=clean.length2[401:500], condition = ~.x %in% na.values.2)
-dat <- dat %>%
-  replace_with_na_at(.vars=clean.length2[501:length(clean.length2)], condition = ~.x %in% na.values.2)
-
-dat <-dat %>%
-  replace_with_na_at(.vars=clean.length3, condition = ~.x %in% na.values.3)
-
+load("Analysis Dataset.RData")
+dat<-dat.backup
 ####Variable Manipulations and Recodes####
 
 # Demographic Dummies
@@ -141,7 +111,7 @@ dat$ppol4_4 <- 4-dat$PP4_W4
 ###Index and reliability
 index.ppol_4 <- which(colnames(dat) %in% c("ppol1_4", "ppol2_4", "ppol3_4", "ppol4_4"))
 alpha.ppol_4<-psych::alpha(dat[,index.ppol_4])
-dat$ppol.ind_4 <- rowMeans(dat[,index.ppol_4])/3
+dat$ppol.ind_4 <- rowMeans(dat[,index.ppol_4], na.rm=T)/3
 
 ## Wave 5
 dat$ppol1_5 <- dat$PP1_W5-1
@@ -152,7 +122,7 @@ dat$ppol4_5 <- 4-dat$PP4_W5
 ###Index and reliability
 index.ppol_5 <- which(colnames(dat) %in% c("ppol1_5", "ppol2_5", "ppol3_5", "ppol4_5"))
 alpha.ppol_5<-psych::alpha(dat[,index.ppol_5])
-dat$ppol.ind_5 <- rowMeans(dat[,index.ppol_5])/3
+dat$ppol.ind_5 <- rowMeans(dat[,index.ppol_5], na.rm=T)/3
 
 #Civility Index; (0,1), high=civil
 
@@ -171,11 +141,11 @@ dat$civil.5_5<-dat$CIVIL5_W5
 ##Create scale, standardized (0,1), and alpha
 
 civil.index_4<-which(colnames(dat) %in% c("civil.1_4", "civil.2_4", "civil.3_4", "civil.4_4", "civil.5_4"))
-dat$civil.ind_4 <- (rowMeans(dat[,civil.index_4])-1)/9
+dat$civil.ind_4 <- (rowMeans(dat[,civil.index_4], na.rm=T)-1)/9
 alpha.civil_4<-psych::alpha(dat[civil.index_4])
 
 civil.index_5<-which(colnames(dat) %in% c("civil.1_5", "civil.2_5", "civil.3_5", "civil.4_5", "civil.5_5"))
-dat$civil.ind_5 <- (rowMeans(dat[,civil.index_5])-1)/9
+dat$civil.ind_5 <- (rowMeans(dat[,civil.index_5], na.rm=T)-1)/9
 alpha.civil_5<-psych::alpha(dat[civil.index_5])
 
 #Interest (0= no interest; 3=very interested)
@@ -204,11 +174,11 @@ dat$imm3_5<-dat$IM3_W5
 ##Collapsed into Scale and Standardized. Alpha reported
 
 imm.index_4<-which(colnames(dat) %in% c("imm1_4", "imm2_4", "imm3_4"))
-dat$imm.ind_4 <- rowMeans(dat[,imm.index_4])-1
+dat$imm.ind_4 <- rowMeans(dat[,imm.index_4], na.rm=T)-1
 alpha.imm_4<-psych::alpha(dat[imm.index_4])
 
 imm.index_5<-which(colnames(dat) %in% c("imm1_5", "imm2_5", "imm3_5"))
-dat$imm.ind_5 <- rowMeans(dat[,imm.index_5])-1
+dat$imm.ind_5 <- rowMeans(dat[,imm.index_5], na.rm=T)-1
 alpha.imm_5<-psych::alpha(dat[imm.index_5])
 
 #Issue Polarization Scale; (0,1), 1=highly polarized, 0= middle of road/no polarization
@@ -232,18 +202,18 @@ dat <- dat %>%
 
 iss.pol.index_4<-which(colnames(dat) %in% c("iss1_4", "iss2_4", "iss3_4", "iss4_4", "iss5_4"))
 alpha.iss.pol_4<-psych::alpha(dat[iss.pol.index_4])
-dat$iss.pol_4 <- rowMeans(dat[,iss.pol.index_4])
+dat$iss.pol_4 <- rowMeans(dat[,iss.pol.index_4], na.rm=T)
 
 iss.pol.index_5<-which(colnames(dat) %in% c("iss1_5", "iss2_5", "iss3_5", "iss4_5", "iss5_5"))
 alpha.iss.pol_5<-psych::alpha(dat[iss.pol.index_5])
-dat$iss.pol_5 <- rowMeans(dat[,iss.pol.index_5])
+dat$iss.pol_5 <- rowMeans(dat[,iss.pol.index_5], na.rm=T)
 
 #Extreme Ideology; (0,3) 3=extreme, 0=moderate
 
 dat$ideo.x_4<-(recode(dat$P_IDEO_W4, "1=3;7=3;2=2;6=2;3=1;5=1;4=0;8=0;else=NA"))/3
 dat$ideo.x_5<-(recode(dat$P_IDEO_W5, "1=3;7=3;2=2;6=2;3=1;5=1;4=0;8=0;else=NA"))/3
 
-# Perceived Elite Polarization (0,1); 1=high perceived elite polarization
+# Perceived Party Polarization (0,1); 1=high perceived elite polarization
 dat <- dat %>%
   mutate(imm.diff_5=abs(IM1A_W5-IM1B_W5)/4, tr.diff_5=abs(TR1A_W5-TR1B_W5)/4, 
          chi.diff_5=abs(CHI3_W5-CHI4_W5)/4, rs.diff_5=abs(RS1A_W5-RS1B_W5)/3,
@@ -252,11 +222,12 @@ dat <- dat %>%
 ##Index and reliability
 index.diff<-grep("\\.diff_5", colnames(dat))
 alpha.diff<-psych::alpha(dat[,index.diff])
-dat$elite.ppolar_5 <- rowMeans(dat[,index.diff])
+dat$elite.ppolar_5 <- rowMeans(dat[,index.diff], na.rm=T)
 
 # Combined Social Media Use Index (0,16); 16=high use
 dat <- dat %>%
-  mutate(sm.ind_4=fb.use5_4+ig.use5_4+tw.use5_4+yt.use5_4, sm.ind_5=fb.use5_5+ig.use5_5+tw.use5_5+yt.use5_5)
+  mutate(sm.ind_4=fb.use5_4+ig.use5_4+tw.use5_4+yt.use5_4, 
+         sm.ind_5=fb.use5_5+ig.use5_5+tw.use5_5+yt.use5_5)
 
 ##Alphas
 alpha.sm_4<-psych::alpha(dat[,grep("use5_4", colnames(dat))])
@@ -286,6 +257,109 @@ dat$inc_5<-(dat$INCOME_W5-1)/17
 # Rescale AGE7 (0,1; 1=75+)
 dat$age7_4<-(dat$AGE7_W4-1)/6
 dat$age7_5<-(dat$AGE7_W5-1)/6
+
+#Recode credibility; positive = more credible
+##Wave 4
+
+dat$fb.cred_4<-recode(dat$SOCIAL2_1_W4, "1=6; 2=5; 3=4; 4=3; 5=2; 6=1")
+dat$yt.cred_4<-recode(dat$SOCIAL2_2_W4, "1=6; 2=5; 3=4; 4=3; 5=2; 6=1")
+dat$tw.cred_4<-recode(dat$SOCIAL2_3_W4, "1=6; 2=5; 3=4; 4=3; 5=2; 6=1")
+dat$ig.cred_4<-recode(dat$SOCIAL2_4_W4, "1=6; 2=5; 3=4; 4=3; 5=2; 6=1")
+
+###Transform credibility; -1 = un-credible, +1 = credible
+dat<-dat %>%
+  mutate(fb.cred.r_4=((2/5)*(fb.cred_4-1)-1), yt.cred.r_4=((2/5)*(yt.cred_4-1)-1), 
+         tw.cred.r_4=((2/5)*(tw.cred_4-1)-1), ig.cred.r_4=((2/5)*(ig.cred_4-1)-1))
+
+##Wave 5
+dat$fb.cred_5<-recode(dat$SOCIAL2_1_W5, "1=6; 2=5; 3=4; 4=3; 5=2; 6=1")
+dat$yt.cred_5<-recode(dat$SOCIAL2_2_W5, "1=6; 2=5; 3=4; 4=3; 5=2; 6=1")
+dat$tw.cred_5<-recode(dat$SOCIAL2_3_W5, "1=6; 2=5; 3=4; 4=3; 5=2; 6=1")
+dat$ig.cred_5<-recode(dat$SOCIAL2_4_W5, "1=6; 2=5; 3=4; 4=3; 5=2; 6=1")
+
+###Transform credibility; -1 = un-credible, +1 = credible
+dat<-dat %>%
+  mutate(fb.cred.r_5=((2/5)*(fb.cred_5-1)-1), yt.cred.r_5=((2/5)*(yt.cred_5-1)-1), 
+         tw.cred.r_5=((2/5)*(tw.cred_5-1)-1), ig.cred.r_5=((2/5)*(ig.cred_5-1)-1))
+
+#Create measure of passive political info exposure per platform; [0,3] 3= high exposure
+dat <- dat %>%
+  mutate(fb.pass.exp_4=SOCIAL3_1_W4-1, yt.pass.exp_4=SOCIAL3_2_W4-1, tw.pass.exp_4=SOCIAL3_3_W4-1,
+         ig.pass.exp_4=SOCIAL3_4_W4-1, fb.pass.exp_5=SOCIAL3_1_W5-1, yt.pass.exp_5=SOCIAL3_2_W5-1, 
+         tw.pass.exp_5=SOCIAL3_3_W5-1, ig.pass.exp_5=SOCIAL3_4_W5-1)
+#Active News exposure
+##Membership in political groups
+
+##Wave 4
+dat$fb.group.dum_4<-ifelse(dat$SOCIAL1_1_W4>1, dat$SOCIAL4_FACE_1_W4, NA)
+dat$yt.group.dum_4<-ifelse(dat$SOCIAL1_2_W4>1, dat$SOCIAL4_YOU_1_W4, NA)
+dat$tw.group.dum_4<-ifelse(dat$SOCIAL1_3_W4>1, dat$SOCIAL4_TWIT_1_W4, NA)
+dat$ig.group.dum_4<-ifelse(dat$SOCIAL1_4_W4>1, dat$SOCIAL4_INST_1_W4, NA)
+
+##Wave 5
+dat$fb.group.dum_5<-ifelse(dat$SOCIAL1_1_W5>1, dat$SOCIAL4_FACE_1_W5, NA)
+dat$yt.group.dum_5<-ifelse(dat$SOCIAL1_2_W5>1, dat$SOCIAL4_YOU_1_W5, NA)
+dat$tw.group.dum_5<-ifelse(dat$SOCIAL1_3_W5>1, dat$SOCIAL4_TWIT_1_W5, NA)
+dat$ig.group.dum_5<-ifelse(dat$SOCIAL1_4_W5>1, dat$SOCIAL4_INST_1_W5, NA)
+
+##Total number of groups
+
+###Wave 4
+dat <- dat %>%
+  mutate(fb.group.sum_4=SOCIAL4_FACE_1_W4+SOCIAL4_FACE_2_W4+SOCIAL4_FACE_3_W4+SOCIAL4_FACE_4_W4+
+           SOCIAL4_FACE_5_W4+SOCIAL4_FACE_6_W4,
+         yt.group.sum_4=SOCIAL4_YOU_1_W4+SOCIAL4_YOU_2_W4+SOCIAL4_YOU_3_W4+SOCIAL4_YOU_4_W4+
+           SOCIAL4_YOU_5_W4+SOCIAL4_YOU_6_W4,
+         tw.group.sum_4=SOCIAL4_TWIT_1_W4+SOCIAL4_TWIT_2_W4+SOCIAL4_TWIT_3_W4+SOCIAL4_TWIT_4_W4+
+           SOCIAL4_TWIT_5_W4+SOCIAL4_TWIT_6_W4,
+         ig.group.sum_4=SOCIAL4_INST_1_W4+SOCIAL4_INST_2_W4+SOCIAL4_INST_3_W4+SOCIAL4_INST_4_W4+
+           SOCIAL4_INST_5_W4+SOCIAL4_INST_6_W4)
+
+###Wave 5
+dat <- dat %>%
+  mutate(fb.group.sum_5=SOCIAL4_FACE_1_W5+SOCIAL4_FACE_2_W5+SOCIAL4_FACE_3_W5+SOCIAL4_FACE_4_W5+
+           SOCIAL4_FACE_5_W5+SOCIAL4_FACE_6_W5,
+         yt.group.sum_5=SOCIAL4_YOU_1_W5+SOCIAL4_YOU_2_W5+SOCIAL4_YOU_3_W5+SOCIAL4_YOU_4_W5+
+           SOCIAL4_YOU_5_W5+SOCIAL4_YOU_6_W5,
+         tw.group.sum_5=SOCIAL4_TWIT_1_W5+SOCIAL4_TWIT_2_W5+SOCIAL4_TWIT_3_W5+SOCIAL4_TWIT_4_W5+
+           SOCIAL4_TWIT_5_W5+SOCIAL4_TWIT_6_W5,
+         ig.group.sum_5=SOCIAL4_INST_1_W5+SOCIAL4_INST_2_W5+SOCIAL4_INST_3_W5+SOCIAL4_INST_4_W5+
+           SOCIAL4_INST_5_W5+SOCIAL4_INST_6_W5)
+##Political group membership as a proportion of group membership
+dat<-dat %>%
+  mutate(fb.group.prop_4=fb.group.dum_4/fb.group.sum_4, yt.group.prop_4=yt.group.dum_4/yt.group.sum_4,
+         tw.group.prop_4=tw.group.dum_4/tw.group.sum_4, ig.group.prop_4=ig.group.dum_4/ig.group.sum_4,
+         fb.group.prop_5=fb.group.dum_5/fb.group.sum_5, yt.group.prop_5=yt.group.dum_5/yt.group.sum_5,
+         tw.group.prop_5=tw.group.dum_5/tw.group.sum_5, ig.group.prop_5=ig.group.dum_5/ig.group.sum_5,)
+
+# Perceived Party Polarization for overtime analyses
+
+##Wave 4
+dat <- dat %>%
+  mutate(imm.diff.p_4=abs(IM1A_W3-IM1B_W3)/4, tr.diff.p_4=abs(TR1A_W3-TR1B_W3)/4, 
+         chi.diff.p_4=abs(CHI3_W3-CHI4_W3)/4)
+
+###Index and reliability
+index.diff.p_4<-grep("\\.diff.p_4", colnames(dat))
+alpha.diff.p_4<-psych::alpha(dat[,index.diff.p_4])
+dat$elite.ppolar.p_4 <- rowMeans(dat[,index.diff.p_4], na.rm=T)
+
+##Wave 5
+dat <- dat %>%
+  mutate(imm.diff.p_5=abs(IM1A_W5-IM1B_W5)/4, tr.diff.p_5=abs(TR1A_W5-TR1B_W5)/4, 
+         chi.diff.p_5=abs(CHI3_W5-CHI4_W5)/4)
+
+###Index and reliability
+index.diff.p_5<-grep("\\.diff.p_5", colnames(dat))
+alpha.diff.p_5<-psych::alpha(dat[,index.diff.p_5])
+dat$elite.ppolar.p_5 <- rowMeans(dat[,index.diff.p_5], na.rm=T)
+
+#Affective Polarization for overtime analyses
+dat$aff.pol_4<- abs(dat$THERM3_W3-dat$THERM4_W3)/100
+
+```
+
+```{r}
 ####Detailed Analyses####
 # Average each polarization by each platform
 
@@ -505,301 +579,11 @@ lm.elite.fb.d<-lm(elite.ppolar_5~fb.use.dummy_5+white_5+edu4_5+inc_5+male_5+rep_
 lm.elite.ig.d<-lm(elite.ppolar_5~ig.use.dummy_5+white_5+edu4_5+inc_5+male_5+rep_5+dem_5+party.x_5+age7_5+interest_5, data=dat)
 lm.elite.tw.d<-lm(elite.ppolar_5~tw.use.dummy_5+white_5+edu4_5+inc_5+male_5+rep_5+dem_5+party.x_5+age7_5+interest_5, data=dat)
 lm.elite.yt.d<-lm(elite.ppolar_5~yt.use.dummy_5+white_5+edu4_5+inc_5+male_5+rep_5+dem_5+party.x_5+age7_5+interest_5, data=dat)
+```
 
-
-##Compile models
+```{r, results='asis'}
 stargazer(lm.iss.all1, lm.ppol.all1, lm.aff.all1, lm.elite.all1, star.cutoffs = c(.05, .01, .001), 
           covariate.labels = c("Social Media Use", "White", "Education", "Income", "Male", "Republican", "Democrat", 
-                               "Party Extremity", "Age", "Interest"))
-stargazer(lm.iss.all2, lm.ppol.all2, lm.aff.all2, lm.elite.all2, star.cutoffs = c(.05, .01, .001))
-stargazer(lm.iss.fb, lm.iss.ig, lm.iss.tw, lm.iss.yt, star.cutoffs = c(.05, .01, .001))
-stargazer(lm.ppol.fb, lm.ppol.ig, lm.ppol.tw, lm.ppol.yt, star.cutoffs = c(.05, .01, .001))
-stargazer(lm.aff.fb, lm.aff.ig, lm.aff.tw, lm.aff.yt, star.cutoffs = c(.05, .01, .001))
-stargazer(lm.elite.fb, lm.elite.ig, lm.elite.tw, lm.elite.yt, star.cutoffs = c(.05, .01, .001))
-
-stargazer(lm.iss.fb.d, lm.iss.ig.d, lm.iss.tw.d, lm.iss.yt.d, star.cutoffs = c(.05, .01, .001))
-stargazer(lm.ppol.fb.d, lm.ppol.ig.d, lm.ppol.tw.d, lm.ppol.yt.d, star.cutoffs = c(.05, .01, .001))
-stargazer(lm.aff.fb.d, lm.aff.ig.d, lm.aff.tw.d, lm.aff.yt.d, star.cutoffs = c(.05, .01, .001))
-stargazer(lm.elite.fb.d, lm.elite.ig.d, lm.elite.tw.d, lm.elite.yt.d, star.cutoffs = c(.05, .01, .001))
-
-
-# Change over time analyses
-dat.p2 <- dat %>%
-  select(CaseId, ppol.ind_4, ppol.ind_5, fb.use5_4, fb.use5_5, yt.use5_4, yt.use5_5, tw.use5_4, tw.use5_5,
-         ig.use5_4, ig.use5_5, fb.use.dummy_4, fb.use.dummy_5, yt.use.dummy_4, yt.use.dummy_5, 
-         tw.use.dummy_4, tw.use.dummy_5, ig.use.dummy_4, ig.use.dummy_5, iss.pol_4, iss.pol_5, civil.ind_4,
-         civil.ind_5, interest_4, interest_5, sm.ind.r_4, sm.ind.r_5, platform.sum_4, platform.sum_5) %>%
-  pivot_longer(-CaseId, names_to = c(".value", "wave"), names_sep = "_")
-
-##Perceived Polarization
-m.ppol.fb <- plm(ppol.ind~fb.use5+fb.use.dummy+ig.use.dummy+tw.use.dummy+yt.use.dummy+civil.ind+interest, 
-                 data=dat.p2, model='within', index='CaseId')
-
-m.ppol.ig <- plm(ppol.ind~ig.use5+fb.use.dummy+ig.use.dummy+tw.use.dummy+yt.use.dummy+civil.ind+interest, 
-                 data=dat.p2, model='within', index='CaseId')
-
-m.ppol.tw <- plm(ppol.ind~tw.use5+fb.use.dummy+ig.use.dummy+tw.use.dummy+yt.use.dummy+civil.ind+interest, 
-                 data=dat.p2, model='within', index='CaseId')
-
-m.ppol.yt <- plm(ppol.ind~yt.use5+fb.use.dummy+ig.use.dummy+tw.use.dummy+yt.use.dummy+civil.ind+interest, 
-                 data=dat.p2, model='within', index='CaseId')
-
-m.ppol.all<-plm(ppol.ind~sm.ind+fb.use.dummy+ig.use.dummy+tw.use.dummy+yt.use.dummy+interest, 
-                data=dat.p2, model='within', index='CaseId')
-
-m.ppol.all2<-plm(ppol.ind~sm.ind.r+interest, 
-                data=dat.p2, model='within', index='CaseId')
-
-m.ppol.platform<-plm(ppol.ind~platform.sum+interest, data=dat.p2, model='within', index='CaseId')
-
-
-##Issue Polarization
-m.iss.fb <- plm(iss.pol~fb.use5+fb.use.dummy+ig.use.dummy+tw.use.dummy+yt.use.dummy+civil.ind+interest, 
-                 data=dat.p2, model='within', index='CaseId')
-
-m.iss.ig <- plm(iss.pol~ig.use5+fb.use.dummy+ig.use.dummy+tw.use.dummy+yt.use.dummy+civil.ind+interest, 
-                 data=dat.p2, model='within', index='CaseId')
-
-m.iss.tw <- plm(iss.pol~tw.use5+fb.use.dummy+ig.use.dummy+tw.use.dummy+yt.use.dummy+civil.ind+interest, 
-                 data=dat.p2, model='within', index='CaseId')
-
-m.iss.yt <- plm(iss.pol~yt.use5+fb.use.dummy+ig.use.dummy+tw.use.dummy+yt.use.dummy+civil.ind+interest, 
-                 data=dat.p2, model='within', index='CaseId')
-
-m.iss.all <- plm(iss.pol~sm.ind+fb.use.dummy+ig.use.dummy+tw.use.dummy+yt.use.dummy+interest, 
-                data=dat.p2, model='within', index='CaseId')
-
-m.iss.all2 <- plm(iss.pol~sm.ind.r+interest, 
-                 data=dat.p2, model='within', index='CaseId')
-
-m.iss.platform <- plm(iss.pol~platform.sum+interest, data=dat.p2, model='within', index='CaseId')
-
-
-stargazer(m.iss.all, m.ppol.all, star.cutoffs = c(.05, .01, .001))
-stargazer(m.iss.fb, m.iss.ig, m.iss.tw, m.iss.yt, star.cutoffs = c(.05, .01, .001))
-stargazer(m.ppol.fb, m.ppol.ig, m.ppol.tw, m.ppol.yt, star.cutoffs = c(.05, .01, .001))
-stargazer(m.iss.all2, m.ppol.all2, star.cutoffs = c(.05, .01, .001))
-stargazer(m.iss.platform, m.ppol.platform, star.cutoffs = c(.05, .01, .001))
-##############################################
-##############################################
-####Not used####
-#Cross-sectional effects of social media use (wave 4)
-
-## Issue Extremity
-lm.iss.fb_4<-lm(iss.pol_4~fb.use5_4+fb.use.dummy_4+ig.use.dummy_4+tw.use.dummy_4+yt.use.dummy_4+white_4+
-                EDUC4_W4+INCOME_W4+male_4+party3_4+AGE7_W4, data=dat)
-lm.iss.ig_4<-lm(iss.pol_4~ig.use5_4+ig.use.dummy_4+fb.use.dummy_4+tw.use.dummy_4+yt.use.dummy_4+white_4+
-                EDUC4_W4+INCOME_W4+male_4+party3_4+AGE7_W4, data=dat)
-lm.iss.tw_4<-lm(iss.pol_4~tw.use5_4+tw.use.dummy_4+ig.use.dummy_4+fb.use.dummy_4+yt.use.dummy_4+white_4+
-                EDUC4_W4+INCOME_W4+male_4+party3_4+AGE7_W4, data=dat)
-lm.iss.yt_4<-lm(iss.pol_4~yt.use5_4+yt.use.dummy_4+ig.use.dummy_4+tw.use.dummy_4+fb.use.dummy_4+white_4+
-                EDUC4_W4+INCOME_W4+male_4+party3_4+AGE7_W4, data=dat)
-
-##Perceived Polarization
-lm.ppol.fb_4<-lm(ppol.ind_4~fb.use5_4+fb.use.dummy_4+ig.use.dummy_4+tw.use.dummy_4+yt.use.dummy_4+white_4+
-                 EDUC4_W4+INCOME_W4+male_4+party3_4+AGE7_W4, data=dat)
-lm.ppol.ig_4<-lm(ppol.ind_4~ig.use5_4+ig.use.dummy_4+fb.use.dummy_4+tw.use.dummy_4+yt.use.dummy_4+white_4+
-                 EDUC4_W4+INCOME_W4+male_4+party3_4+AGE7_W4, data=dat)
-lm.ppol.tw_4<-lm(ppol.ind_4~tw.use5_4+tw.use.dummy_4+ig.use.dummy_4+fb.use.dummy_4+yt.use.dummy_4+white_4+
-                 EDUC4_W4+INCOME_W4+male_4+party3_4+AGE7_W4, data=dat)
-lm.ppol.yt_4<-lm(ppol.ind_4~yt.use5_4+yt.use.dummy_4+ig.use.dummy_4+tw.use.dummy_4+fb.use.dummy_4+white_4+
-                 EDUC4_W4+INCOME_W4+male_4+party3_4+AGE7_W4, data=dat)
-
-#Compare Coefficients from models above
-
-# Perceived Polarization
-fb.ppol<-rnorm(10000, mean=summary(lm.ppol.fb)$coef[1,2], sd=summary(lm.ppol.fb)$coef[2,2])
-ig.ppol<-rnorm(10000, mean=summary(lm.ppol.ig)$coef[1,2], sd=summary(lm.ppol.ig)$coef[2,2])
-tw.ppol<-rnorm(10000, mean=summary(lm.ppol.tw)$coef[1,2], sd=summary(lm.ppol.tw)$coef[2,2])
-yt.ppol<-rnorm(10000, mean=summary(lm.ppol.yt)$coef[1,2], sd=summary(lm.ppol.yt)$coef[2,2])
-
-## Comparisons
-###Facebook has a larger effect on ppol than twitter use
-fb.tw.diff<-fb.ppol-tw.ppol
-p.fb.tw.diff<-sum(fb.tw.diff>0)/10000
-p.fb.tw.diff
-
-###Facebook has a smaller effect on ppol than Insta use
-fb.ig.diff<-fb.ppol-ig.ppol
-p.fb.ig.diff<-sum(fb.ig.diff>0)/10000
-p.fb.ig.diff
-
-###Facebook has a smaller effect on ppol than YT use
-fb.yt.diff<-fb.ppol-yt.ppol
-p.fb.yt.diff<-sum(fb.yt.diff>0)/10000
-p.fb.yt.diff
-
-###Twitter has a smaller effect on ppol than Insta use
-tw.ig.diff<-tw.ppol-ig.ppol
-p.tw.ig.diff<-sum(tw.ig.diff>0)/10000
-p.tw.ig.diff
-
-###Twitter has a smaller effect on ppol than YouTube use
-tw.yt.diff<-tw.ppol-yt.ppol
-p.tw.yt.diff<-sum(tw.yt.diff>0)/10000
-p.tw.yt.diff
-
-###YouTube has a larger effect than Instagram
-yt.ig.diff<-yt.ppol-ig.ppol
-p.yt.ig.diff<-sum(yt.ig.diff>0)/10000
-p.yt.ig.diff
-
-# Issue Polarization
-fb.ppol<-rnorm(10000, mean=summary(lm.iss.fb)$coef[1,2], sd=summary(lm.iss.fb)$coef[2,2])
-ig.ppol<-rnorm(10000, mean=summary(lm.iss.ig)$coef[1,2], sd=summary(lm.iss.ig)$coef[2,2])
-tw.ppol<-rnorm(10000, mean=summary(lm.iss.tw)$coef[1,2], sd=summary(lm.iss.tw)$coef[2,2])
-yt.ppol<-rnorm(10000, mean=summary(lm.iss.yt)$coef[1,2], sd=summary(lm.iss.yt)$coef[2,2])
-
-## Comparisons
-###Facebook has a larger effect on ppol than twitter use
-fb.tw.diff<-fb.ppol-tw.ppol
-p.fb.tw.diff<-sum(fb.tw.diff>0)/10000
-p.fb.tw.diff
-
-###Facebook has a smaller effect on ppol than Insta use
-fb.ig.diff<-fb.ppol-ig.ppol
-p.fb.ig.diff<-sum(fb.ig.diff>0)/10000
-p.fb.ig.diff
-
-###Facebook has a smaller effect on ppol than YT use
-fb.yt.diff<-fb.ppol-yt.ppol
-p.fb.yt.diff<-sum(fb.yt.diff>0)/10000
-p.fb.yt.diff
-
-###Twitter has a smaller effect on ppol than Insta use
-tw.ig.diff<-tw.ppol-ig.ppol
-p.tw.ig.diff<-sum(tw.ig.diff>0)/10000
-
-###Twitter has a smaller effect on ppol than YouTube use
-tw.yt.diff<-tw.ppol-yt.ppol
-p.tw.yt.diff<-sum(tw.yt.diff>0)/10000
-
-###YouTube has a larger effect than Instagram
-yt.ig.diff<-yt.ppol-ig.ppol
-p.yt.ig.diff<-sum(yt.ig.diff>0)/10000
-
-# Affective Polarization
-fb.ppol<-rnorm(10000, mean=summary(lm.aff.fb)$coef[1,2], sd=summary(lm.aff.fb)$coef[2,2])
-ig.ppol<-rnorm(10000, mean=summary(lm.aff.ig)$coef[1,2], sd=summary(lm.aff.ig)$coef[2,2])
-tw.ppol<-rnorm(10000, mean=summary(lm.aff.tw)$coef[1,2], sd=summary(lm.aff.tw)$coef[2,2])
-yt.ppol<-rnorm(10000, mean=summary(lm.aff.yt)$coef[1,2], sd=summary(lm.aff.yt)$coef[2,2])
-
-## Comparisons
-###Facebook has a larger effect on ppol than twitter use
-fb.tw.diff<-fb.ppol-tw.ppol
-p.fb.tw.diff<-sum(fb.tw.diff>0)/10000
-
-###Facebook has a smaller effect on ppol than Insta use
-fb.ig.diff<-fb.ppol-ig.ppol
-p.fb.ig.diff<-sum(fb.ig.diff>0)/10000
-
-###Facebook has a smaller effect on ppol than YT use
-fb.yt.diff<-fb.ppol-yt.ppol
-p.fb.yt.diff<-sum(fb.yt.diff>0)/10000
-
-###Twitter has a smaller effect on ppol than Insta use
-tw.ig.diff<-tw.ppol-ig.ppol
-p.tw.ig.diff<-sum(tw.ig.diff>0)/10000
-
-###Twitter has a smaller effect on ppol than YouTube use
-tw.yt.diff<-tw.ppol-yt.ppol
-p.tw.yt.diff<-sum(tw.yt.diff>0)/10000
-
-###YouTube has a larger effect than Instagram
-yt.ig.diff<-yt.ppol-ig.ppol
-p.yt.ig.diff<-sum(yt.ig.diff>0)/10000
-
-
-
-####Quick analyses####
-dat.p <- dat %>%
-  select(CaseId, ppol.ind_4, ppol.ind_5, fb.use5_4, fb.use5_5, yt.use5_4, yt.use5_5, tw.use5_4, tw.use5_5,
-         ig.use5_4, ig.use5_5) %>%
-  pivot_longer(-CaseId, names_to = c(".value", "wave"), names_sep = "_")
-
-model.q1<-plm(formula=ppol.ind~fb.use5, data=dat.p, model='within', index='CaseId', type='individual')
-model.q2<-plm(formula=ppol.ind~yt.use5, data=dat.p, model='within', index='CaseId', type='individual')
-model.q3<-plm(formula=ppol.ind~tw.use5, data=dat.p, model='within', index='CaseId', type='individual')
-model.q4<-plm(formula=ppol.ind~ig.use5, data=dat.p, model='within', index='CaseId', type='individual')
-
-lm.q1 <- lm(aff.pol_5~fb.use5_5+AGE7_W5+party3_5+male_5+white_5+INCOME_W5+EDUC4_W5, data=dat)
-lm.q2 <- lm(aff.pol_5~yt.use5_5+AGE7_W5+party3_5+male_5+white_5+INCOME_W5+EDUC4_W5, data=dat)
-lm.q3 <- lm(aff.pol_5~tw.use5_5+AGE7_W5+party3_5+male_5+white_5+INCOME_W5+EDUC4_W5, data=dat)
-lm.q4 <- lm(aff.pol_5~ig.use5_5+AGE7_W5+party3_5+male_5+white_5+INCOME_W5+EDUC4_W5, data=dat)
-
-
-
-
-####Increasers vs Decreasers####
-
-# Look at SM Increasers
-dat <- dat %>%
-  mutate(fb.diff=fb.use5_5-fb.use5_4, ig.diff=ig.use5_5-ig.use5_4,
-         tw.diff=tw.use5_5-tw.use5_4, yt.diff=yt.use5_5-yt.use5_4, 
-         iss.pol.diff=iss.pol_5-iss.pol_4, ppol.diff=ppol.ind_5-ppol.ind_4, 
-         interest.diff=interest_5-interest_4, sm.diff=sm.ind.r_5-sm.ind.r_4)
-
-dat$sm.change.quick<-ifelse(dat$sm.diff<0, -1, ifelse(dat$sm.diff>0, 1, 
-                                                      ifelse(dat$sm.diff==0, 0, NA)))
-
-dat$fb.inc<-ifelse(dat$fb.diff>0, dat$fb.diff, 0)
-dat$fb.dec<-ifelse(dat$fb.diff<0, abs(dat$fb.diff), 0)
-dat$ig.inc<-ifelse(dat$ig.diff>0, dat$ig.diff, 0)
-dat$ig.dec<-ifelse(dat$ig.diff<0, abs(dat$ig.diff), 0)
-dat$tw.inc<-ifelse(dat$tw.diff>0, dat$tw.diff, 0)
-dat$tw.dec<-ifelse(dat$tw.diff<0, abs(dat$tw.diff), 0)
-dat$yt.inc<-ifelse(dat$yt.diff>0, dat$yt.diff, 0)
-dat$yt.dec<-ifelse(dat$yt.diff<0, abs(dat$yt.diff), 0)
-
-dat$sm.inc<-ifelse(dat$sm.diff>0, dat$sm.diff, 0)
-dat$sm.dec<-ifelse(dat$sm.diff<0, abs(dat$sm.diff), 0)
-
-##Models
-
-###Issue Polarization
-m.fb.iss.inc<-lm(iss.pol.diff~fb.inc, data=dat)
-m.fb.iss.dec<-lm(iss.pol.diff~fb.dec, data=dat)
-
-m.ig.iss.inc<-lm(iss.pol.diff~ig.inc, data=dat)
-m.ig.iss.dec<-lm(iss.pol.diff~ig.dec, data=dat)
-
-m.tw.iss.inc<-lm(iss.pol.diff~tw.inc, data=dat)
-m.tw.iss.dec<-lm(iss.pol.diff~tw.dec, data=dat)
-
-m.yt.iss.inc<-lm(iss.pol.diff~yt.inc, data=dat)
-m.yt.iss.dec<-lm(iss.pol.diff~yt.dec, data=dat)
-
-m.sm.iss<-lm(iss.pol.diff~sm.inc+sm.dec+interest.diff, data=dat)
-linearHypothesis(m.sm.iss, c("sm.inc=sm.dec"))
-
-###Perceived Polarization
-m.fb.ppol.inc<-lm(ppol.diff~fb.inc, data=dat)
-m.fb.ppol.dec<-lm(ppol.diff~fb.dec, data=dat)
-
-m.ig.ppol.inc<-lm(ppol.diff~ig.inc, data=dat)
-m.ig.ppol.dec<-lm(ppol.diff~ig.dec, data=dat)
-
-m.tw.ppol.inc<-lm(ppol.diff~tw.inc, data=dat)
-m.tw.ppol.dec<-lm(ppol.diff~tw.dec, data=dat)
-
-m.yt.ppol.inc<-lm(ppol.diff~yt.inc, data=dat)
-m.yt.ppol.dec<-lm(ppol.diff~yt.dec, data=dat)
-
-m.sm.ppol<-lm(ppol.diff~sm.inc+sm.dec+interest.diff, data=dat)
-linearHypothesis(m.sm.ppol, c("sm.inc=sm.dec"))
-## Compile Models
-stargazer(m.sm.iss, m.sm.ppol, star.cutoffs = c(.05, .01, .001))
-
-# Output it all to Stata for double-checking
-dat.out<- dat %>%
-  select(sm.inc, sm.dec, ppol.diff, iss.pol.diff, interest.diff, CaseId)
-
-colnames(dat.out) <- gsub("\\.", "_", colnames(dat.out))
-foreign::write.dta(dat.out, file="Asymmetrical Data.dta")
-
-
-
-
-
-
+                               "Party Extremity", "Age", "Interest"), type='html')
+```
 
